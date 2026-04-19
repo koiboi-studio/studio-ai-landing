@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Studio AI - Your Senior Partner in Bitwig</title>
+    <style>
+        :root {
+            --bg: #000000;
+            --accent: #FF6E27;
+            --text-primary: #E5E5E7;
+            --text-dim: #6C727D;
+            --success: #00E676;
+            --border: rgba(255, 255, 255, 0.08);
+            --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-primary);
+            font-family: var(--font);
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
+            font-feature-settings: "kern" 1;
+        }
+
+        /* ─── Canvases ─────────────────────────────────────────── */
+        #particle-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        #trail-canvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        /* ─── Section divider ──────────────────────────────────── */
+        .section-divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(to right,
+                transparent 0%,
+                rgba(255, 110, 39, 0.6) 30%,
+                rgba(0, 212, 255, 0.6) 70%,
+                transparent 100%
+            );
+            position: relative;
+            z-index: 1;
+            margin: 0;
+        }
+
+        /* ─── Nav ──────────────────────────────────────────────── */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 40px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            backdrop-filter: blur(2px);
+        }
+        .logo {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 3px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+        }
+        .nav-links { display: flex; gap: 40px; }
+        .nav-links a {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-dim);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: color 0.3s;
+        }
+        .nav-links a:hover { color: var(--accent); }
+
+        /* ─── Hero ─────────────────────────────────────────────── */
+        .hero {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Background video */
+        .hero-video-bg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+        .hero-video-bg video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Dark overlay */
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.52);
+            z-index: 1;
+        }
+
+        /* Scanline texture overlay */
+        .hero-scanlines {
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0px,
+                transparent 2px,
+                rgba(0, 0, 0, 0.08) 2px,
+                rgba(0, 0, 0, 0.08) 4px
+            );
+        }
+
+        /* Radial glow on top of everything */
+        .hero-glow {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            background: radial-gradient(ellipse 70% 60% at 50% 45%, rgba(255, 110, 39, 0.08) 0%, rgba(255, 110, 39, 0.02) 40%, transparent 70%);
+        }
+
+        /* Rings canvas — sits above overlay, below content */
+        #hero-canvas {
+            width: 400px;
+            height: 400px;
+            position: absolute;
+            z-index: 4;
+            filter: drop-shadow(0 0 40px rgba(255, 110, 39, 0.3));
+            will-change: transform;
+            transition: transform 0.08s ease-out;
+        }
+
+        /* Hero content sits above all */
+        .hero-content {
+            position: relative;
+            z-index: 5;
+            margin-top: 250px;
+            will-change: transform;
+            transition: transform 0.1s ease-out;
+        }
+
+        .hero h1 {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 5px;
+            color: var(--accent);
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            text-shadow: 0 0 30px rgba(255, 110, 39, 0.6);
+            will-change: transform;
+            transition: transform 0.12s ease-out;
+        }
+
+        .hero h2 {
+            font-size: 72px;
+            font-weight: 900;
+            letter-spacing: -3px;
+            margin-bottom: 24px;
+            line-height: 1.0;
+            will-change: transform;
+            transition: transform 0.1s ease-out;
+            text-shadow: 0 4px 40px rgba(0,0,0,0.8);
+        }
+
+        .hero p {
+            font-size: 18px;
+            color: var(--text-dim);
+            max-width: 600px;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            will-change: transform;
+            transition: transform 0.09s ease-out;
+        }
+
+        .cta-group { display: flex; gap: 20px; align-items: center; }
+        .price-tag {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-right: 20px;
+        }
+        .price-label {
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .price-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+        .old-price {
+            text-decoration: line-through;
+            color: var(--text-dim);
+            font-size: 16px;
+            margin-right: 8px;
+        }
+
+        /* ─── Pricing CTA section ──────────────────────────────── */
+        .pricing-section {
+            background: #000;
+            padding: 80px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 760px;
+            padding: 40px 48px;
+            border: 1px solid rgba(255,110,39,0.2);
+            border-radius: 24px;
+            background: rgba(255,255,255,0.025);
+            box-shadow: 0 0 60px rgba(255,110,39,0.06), inset 0 1px 0 rgba(255,110,39,0.06);
+        }
+        .meta-text {
+            font-size: 13px;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+        .meta-text span {
+            display: block;
+            font-weight: 900;
+            color: var(--text-primary);
+            font-size: 18px;
+            letter-spacing: -0.5px;
+            margin-bottom: 4px;
+        }
+
+        .status-demo {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+        }
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            font-weight: 800;
+            color: var(--text-dim);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 8px 16px;
+            border-radius: 100px;
+            border: 1px solid var(--border);
+            letter-spacing: 1px;
+        }
+        .dot { width: 6px; height: 6px; border-radius: 50%; background: #3F3F46; }
+        .dot.on { background: var(--success); box-shadow: 0 0 10px var(--success); }
+
+        /* ─── Buttons ──────────────────────────────────────────── */
+        .btn {
+            padding: 16px 32px;
+            border-radius: 100px;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+            border: none;
+            display: inline-block;
+        }
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 10px 30px rgba(255, 110, 39, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(255, 110, 39, 0.5);
+        }
+        .btn-secondary {
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            background: rgba(255,255,255,0.03);
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.08); }
+
+        /* ─── Video showcase ────────────────────────────────────── */
+        .video-section {
+            padding: 120px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+        }
+        .video-label {
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 30px;
+        }
+        .video-container {
+            width: 100%;
+            max-width: 1000px;
+            aspect-ratio: 16/9;
+            background: #111;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 110, 39, 0.2);
+            overflow: hidden;
+            position: relative;
+            box-shadow:
+                0 40px 100px rgba(0,0,0,0.8),
+                0 0 60px rgba(255, 110, 39, 0.08),
+                inset 0 1px 0 rgba(255, 110, 39, 0.06);
+        }
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            object-fit: cover;
+        }
+
+        /* ─── Waveform ──────────────────────────────────────────── */
+        .waveform-section {
+            width: 100%;
+            padding: 100px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+            background: linear-gradient(to bottom,
+                transparent 0%,
+                rgba(255, 110, 39, 0.03) 30%,
+                rgba(255, 110, 39, 0.03) 70%,
+                transparent 100%
+            );
+        }
+        .waveform-section .section-heading {
+            font-size: 40px;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            margin-bottom: 48px;
+            color: var(--text-primary);
+        }
+        #waveform-canvas {
+            width: 100%;
+            max-width: 1200px;
+            height: 220px;
+            display: block;
+            border-radius: 12px;
+        }
+        .waveform-glow-line {
+            width: 100%;
+            max-width: 1200px;
+            height: 1px;
+            background: linear-gradient(to right, transparent, rgba(255,110,39,0.25), rgba(0,212,255,0.25), transparent);
+            margin-top: 32px;
+        }
+
+        /* ─── Features ──────────────────────────────────────────── */
+        .features-wrapper {
+            position: relative;
+            z-index: 1;
+        }
+        #node-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.18;
+        }
+        .features {
+            padding: 120px 40px;
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .feature-card:nth-child(5) {
+            grid-column: 1 / -1;
+        }
+        .feature-card {
+            padding: 48px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            transition: border-color 0.4s, box-shadow 0.4s, transform 0.4s, background 0.4s;
+            position: relative;
+            overflow: hidden;
+        }
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            background: radial-gradient(circle at 50% 0%, rgba(255, 110, 39, 0.1) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        .feature-card:hover {
+            border-color: rgba(255, 110, 39, 0.5);
+            box-shadow:
+                0 0 40px rgba(255, 110, 39, 0.12),
+                0 20px 60px rgba(0,0,0,0.5),
+                inset 0 1px 0 rgba(255, 110, 39, 0.1),
+                inset 0 0 30px rgba(255, 110, 39, 0.04);
+            transform: translateY(-4px);
+            background: rgba(255, 110, 39, 0.03);
+        }
+        .feature-card:hover::before { opacity: 1; }
+        .feature-card h3 {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+        }
+        .feature-card p {
+            font-size: 16px;
+            line-height: 1.6;
+            color: var(--text-dim);
+        }
+
+        .social-pills {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            flex-wrap: wrap;
+        }
+        .social-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 16px;
+            border-radius: 100px;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            font-size: 10px;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-decoration: none;
+            background: rgba(255, 110, 39, 0.06);
+            transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
+        }
+        .social-pill:hover {
+            background: rgba(255, 110, 39, 0.18);
+            box-shadow: 0 0 20px rgba(255, 110, 39, 0.3);
+            transform: translateY(-1px);
+        }
+
+        /* ─── Setup Guide ───────────────────────────────────────── */
+        .setup-section {
+            padding: 120px 40px;
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .setup-heading {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .setup-title {
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: -2px;
+            margin-bottom: 40px;
+            color: var(--text-primary);
+        }
+        .setup-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255, 110, 39, 0.15);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow:
+                0 40px 100px rgba(0,0,0,0.6),
+                0 0 60px rgba(255, 110, 39, 0.06),
+                inset 0 1px 0 rgba(255, 110, 39, 0.05);
+        }
+        .setup-card iframe {
+            display: block;
+            border: none;
+            width: 100%;
+            height: 700px;
+            background: #111;
+        }
+        .setup-footer {
+            padding: 20px 28px;
+            border-top: 1px solid rgba(255, 110, 39, 0.1);
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        /* ─── Scroll reveal ─────────────────────────────────────── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(32px);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-delay-1 { transition-delay: 0.1s; }
+        .reveal-delay-2 { transition-delay: 0.2s; }
+        .reveal-delay-3 { transition-delay: 0.3s; }
+        .reveal-delay-4 { transition-delay: 0.4s; }
+        .reveal-delay-5 { transition-delay: 0.5s; }
+
+        /* ─── Footer ─────────────────────────────────────────────── */
+        footer {
+            padding: 80px 40px;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            background: linear-gradient(to top, rgba(255,110,39,0.04), transparent);
+            position: relative;
+            z-index: 1;
+        }
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+        }
+        .footer-links a {
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: color 0.3s;
+        }
+        .footer-links a:hover { color: var(--accent); }
+
+        /* ─── Responsive ─────────────────────────────────────────── */
+        @media (max-width: 768px) {
+            nav { padding: 16px 20px; }
+            .nav-links { display: none; }
+
+            .hero { padding: 0 20px; height: auto; min-height: 100vh; justify-content: flex-start; padding-top: 100px; }
+            #hero-canvas { width: 280px; height: 280px; position: relative; margin-bottom: -40px; }
+            .hero-content { margin-top: 0; width: 100%; }
+            .hero h2 { font-size: 42px; letter-spacing: -2px; line-height: 1.05; margin-bottom: 20px; }
+            .hero p { font-size: 16px; margin-bottom: 30px; }
+
+            .pricing-section { padding: 60px 20px; }
+            .product-meta { flex-direction: column; gap: 24px; text-align: center; padding: 28px 24px; }
+            .price-tag { margin-right: 0; align-items: center; }
+            .cta-group { flex-direction: column; width: 100%; gap: 16px; }
+            .btn { width: 100%; text-align: center; }
+
+            .features { grid-template-columns: 1fr; gap: 20px; padding: 60px 20px; }
+            .feature-card { padding: 30px 20px; }
+            .feature-card:nth-child(5) { grid-column: auto; }
+
+            .video-section { padding: 60px 20px; }
+            .waveform-section { padding: 60px 20px; }
+            #waveform-canvas { height: 140px; }
+
+            .setup-section { padding: 60px 20px; }
+            .setup-title { font-size: 32px; }
+            .setup-card iframe { height: 500px; }
+
+            .footer-links { flex-direction: column; gap: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="particle-canvas"></canvas>
+    <canvas id="trail-canvas"></canvas>
+
+    <!-- ─── NAV ─────────────────────────────────────────────── -->
+    <nav>
+        <div class="logo">STUDIO AI</div>
+        <div class="nav-links">
+            <a href="#demo">Demo</a>
+            <a href="#features">Features</a>
+            <a href="#setup">Setup</a>
+        </div>
+    </nav>
+
+    <!-- ─── HERO ─────────────────────────────────────────────── -->
+    <section class="hero" id="hero">
+        <div class="hero-video-bg">
+            <video autoplay loop muted playsinline>
+                <source src="studio_ai_hero.mp4" type="video/mp4">
+            </video>
+        </div>
+        <div class="hero-overlay"></div>
+        <div class="hero-scanlines"></div>
+        <div class="hero-glow"></div>
+
+        <canvas id="hero-canvas" data-parallax="0.02"></canvas>
+
+        <div class="hero-content" data-parallax="0.04">
+            <h1 data-parallax="0.07">System Active</h1>
+            <h2 data-parallax="0.05">Sync your brain<br>with Bitwig Studio.</h2>
+            <p data-parallax="0.035">The first professional AI Senior Partner built exclusively for music producers. Design, arrange, and mix tracks through natural conversation directly inside your DAW.</p>
+        </div>
+    </section>
+
+    <!-- ─── PRICING / CTA ───────────────────────────────────── -->
+    <section class="pricing-section reveal">
+        <div class="product-meta reveal reveal-delay-1">
+            <div class="meta-text">
+                <span>STUDIO AI PARTNER</span>
+                macOS &amp; Windows &bull; Requires Bitwig Studio
+            </div>
+            <div class="cta-group">
+                <div class="price-tag">
+                    <div class="price-label">LIMITED TIME ALPHA</div>
+                    <div class="price-value"><span class="old-price">$149</span>$39</div>
+                </div>
+                <a href="#" class="btn btn-primary">Buy Now</a>
+            </div>
+        </div>
+        <div class="status-demo reveal reveal-delay-2">
+            <div class="status-pill"><div class="dot on"></div> BRAIN</div>
+            <div class="status-pill"><div class="dot on"></div> BITWIG</div>
+        </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- ─── VIDEO SHOWCASE ───────────────────────────────────── -->
+    <section class="video-section" id="demo">
+        <div class="video-label reveal reveal-delay-1">See it in action</div>
+        <div class="video-container reveal reveal-delay-2">
+            <video controls poster="demo_cover.jpg">
+                <source src="studio_ai_hero.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        </div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- ─── WAVEFORM ─────────────────────────────────────────── -->
+    <section class="waveform-section">
+        <div class="section-heading reveal">Feel the System</div>
+        <canvas id="waveform-canvas" class="reveal reveal-delay-1"></canvas>
+        <div class="waveform-glow-line reveal reveal-delay-2"></div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- ─── FEATURES ─────────────────────────────────────────── -->
+    <div class="features-wrapper">
+        <canvas id="node-canvas"></canvas>
+        <section class="features" id="features">
+            <div class="feature-card reveal reveal-delay-1">
+                <h3>Natural Language Control</h3>
+                <p>Talk to your DAW like a senior partner. Create tracks, load plugins, and tweak parameters using natural conversation.</p>
+            </div>
+            <div class="feature-card reveal reveal-delay-2">
+                <h3>Deep Bitwig Integration</h3>
+                <p>Powered by Groove Link. Direct access to tracks, scenes, devices, and transport at the speed of thought.</p>
+            </div>
+            <div class="feature-card reveal reveal-delay-3">
+                <h3>Persistent Memory</h3>
+                <p>Your partner remembers your workflow, your favorite plugins, and your creative vision across every session.</p>
+            </div>
+            <div class="feature-card reveal reveal-delay-4">
+                <h3>Modular Grid Control</h3>
+                <p>Patch The Grid, wire modulators, and build custom effects via conversation. Full CV routing and modular signal design through natural language.</p>
+            </div>
+            <div class="feature-card reveal reveal-delay-5">
+                <h3>See It in Action</h3>
+                <p>Watch real sessions, live builds, and creative experiments. Follow the journey.</p>
+                <div class="social-pills">
+                    <a href="https://www.instagram.com/koiboi_edit_" target="_blank" class="social-pill">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+                        @koiboi_edit_
+                    </a>
+                    <a href="https://www.tiktok.com/@koiboimusix" target="_blank" class="social-pill">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.27 8.27 0 004.84 1.55V6.79a4.85 4.85 0 01-1.07-.1z"/></svg>
+                        @koiboimusix
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ─── SETUP GUIDE ──────────────────────────────────────── -->
+    <div id="setup" style="position:relative; z-index:1;">
+        <section class="setup-section">
+            <div class="setup-heading reveal">Documentation</div>
+            <div class="setup-title reveal reveal-delay-1">Setup Guide</div>
+            <div class="setup-card reveal reveal-delay-2">
+                <iframe src="Studio_AI_Setup_Guide.pdf" title="Studio AI Setup Guide"></iframe>
+                <div class="setup-footer">
+                    <a href="Studio_AI_Setup_Guide.pdf" download class="btn btn-primary">Download PDF</a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="section-divider"></div>
+
+    <!-- ─── FOOTER ────────────────────────────────────────────── -->
+    <footer class="reveal">
+        <div class="footer-content">
+            <div class="footer-links">
+                <a href="https://www.instagram.com/koiboi_edit_" target="_blank">Instagram</a>
+                <a href="mailto:koi.boibooking@gmail.com">Email</a>
+                <a href="https://www.tiktok.com/@koiboimusix" target="_blank">TikTok</a>
+            </div>
+            <div style="font-size: 10px; color: var(--text-dim); margin-top: 20px; letter-spacing: 2px;">
+                &copy; 2026 KOI BOI VISUALS &bull; ALL RIGHTS RESERVED
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        /* ============================================================
+           1. CONCENTRIC RINGS (hero canvas)
+        ============================================================ */
+        const canvas = document.getElementById('hero-canvas');
+        const ctx = canvas.getContext('2d');
+        let heroTime = 0;
+
+        function resizeHero() {
+            canvas.width = 400 * window.devicePixelRatio;
+            canvas.height = 400 * window.devicePixelRatio;
+            canvas.style.width = '400px';
+            canvas.style.height = '400px';
+        }
+        window.addEventListener('resize', resizeHero);
+        resizeHero();
+
+        function draw() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            ctx.clearRect(0, 0, w, h);
+            const layers = 10;
+            const points = 100;
+            const radius = Math.min(w, h) * 0.35;
+            heroTime += 0.005;
+
+            for (let j = 0; j < layers; j++) {
+                ctx.beginPath();
+                const layerTime = heroTime * (1 + j * 0.1);
+                let hue;
+                if (j < 3) hue = 15 + (j * 5);
+                else if (j < 7) hue = 80 + (j * 5);
+                else hue = 190 + (j * 5);
+                ctx.strokeStyle = `hsla(${hue}, 80%, 60%, ${0.6 - (j * 0.04)})`;
+                ctx.lineWidth = 1.5;
+                for (let i = 0; i <= points; i++) {
+                    const angle = (i / points) * Math.PI * 2;
+                    const noise = Math.sin(angle * 6 + layerTime) * 15;
+                    const r = (radius * (j + 1) / layers) + noise;
+                    const x = cx + Math.cos(angle) * r;
+                    const y = cy + Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+            requestAnimationFrame(draw);
+        }
+        draw();
+
+        /* ============================================================
+           2. FLOATING BACKGROUND PARTICLES
+        ============================================================ */
+        const pCanvas = document.getElementById('particle-canvas');
+        const pCtx = pCanvas.getContext('2d');
+
+        function resizeParticles() {
+            pCanvas.width = window.innerWidth;
+            pCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeParticles);
+        resizeParticles();
+
+        const PARTICLE_COUNT = 90;
+        const particles = [];
+
+        function makeParticle() {
+            const isOrange = Math.random() > 0.45;
+            const r = Math.random() * 3 + 2;
+            return {
+                x: Math.random() * pCanvas.width,
+                y: Math.random() * pCanvas.height,
+                r: r,
+                alpha: Math.random() * 0.55 + 0.15,
+                vx: (Math.random() - 0.5) * 0.22,
+                vy: (Math.random() - 0.5) * 0.22 - 0.05,
+                color: isOrange ? '255, 110, 39' : '255, 255, 255',
+                flicker: Math.random() * Math.PI * 2,
+                flickerSpeed: 0.008 + Math.random() * 0.012
+            };
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(makeParticle());
+
+        function animateParticles() {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            for (const p of particles) {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.flicker += p.flickerSpeed;
+                if (p.x < -10) p.x = pCanvas.width + 10;
+                if (p.x > pCanvas.width + 10) p.x = -10;
+                if (p.y < -10) p.y = pCanvas.height + 10;
+                if (p.y > pCanvas.height + 10) p.y = -10;
+                const a = p.alpha * (0.7 + 0.3 * Math.sin(p.flicker));
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                pCtx.fillStyle = `rgba(${p.color}, ${a})`;
+                pCtx.fill();
+                const glowRadius = p.r * 5;
+                const grad = pCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowRadius);
+                grad.addColorStop(0, `rgba(${p.color}, ${a * 0.9})`);
+                grad.addColorStop(0.3, `rgba(${p.color}, ${a * 0.4})`);
+                grad.addColorStop(1, `rgba(${p.color}, 0)`);
+                pCtx.beginPath();
+                pCtx.arc(p.x, p.y, glowRadius, 0, Math.PI * 2);
+                pCtx.fillStyle = grad;
+                pCtx.fill();
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        /* ============================================================
+           3. MOUSE TRAIL
+        ============================================================ */
+        const trailCanvas = document.getElementById('trail-canvas');
+        const trailCtx = trailCanvas.getContext('2d');
+
+        function resizeTrail() {
+            trailCanvas.width = window.innerWidth;
+            trailCanvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeTrail);
+        resizeTrail();
+
+        const TRAIL_COLORS = ['#FF6E27', '#FF3D7F', '#00E676', '#7C3AFF', '#00B4D8'];
+        let trailColorIndex = 0;
+        const trailDots = [];
+
+        document.addEventListener('mousemove', (e) => {
+            const color = TRAIL_COLORS[trailColorIndex % TRAIL_COLORS.length];
+            trailColorIndex++;
+            trailDots.push({
+                x: e.clientX,
+                y: e.clientY,
+                r: 4 + Math.random() * 3,
+                color: color,
+                alpha: 0.9,
+                born: performance.now()
+            });
+        });
+
+        function animateTrail() {
+            trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+            const now = performance.now();
+            const LIFETIME = 600;
+
+            for (let i = trailDots.length - 1; i >= 0; i--) {
+                const d = trailDots[i];
+                const age = now - d.born;
+                if (age > LIFETIME) { trailDots.splice(i, 1); continue; }
+                const progress = age / LIFETIME;
+                const alpha = (1 - progress) * 0.85;
+                const r = d.r * (1 - progress * 0.5);
+
+                const glow = trailCtx.createRadialGradient(d.x, d.y, 0, d.x, d.y, r * 3.5);
+                glow.addColorStop(0, d.color + 'CC');
+                glow.addColorStop(0.4, d.color + '44');
+                glow.addColorStop(1, d.color + '00');
+                trailCtx.beginPath();
+                trailCtx.arc(d.x, d.y, r * 3.5, 0, Math.PI * 2);
+                trailCtx.fillStyle = glow;
+                trailCtx.globalAlpha = alpha;
+                trailCtx.fill();
+
+                trailCtx.beginPath();
+                trailCtx.arc(d.x, d.y, r, 0, Math.PI * 2);
+                trailCtx.fillStyle = d.color;
+                trailCtx.globalAlpha = alpha;
+                trailCtx.fill();
+            }
+            trailCtx.globalAlpha = 1;
+            requestAnimationFrame(animateTrail);
+        }
+        animateTrail();
+
+        /* ============================================================
+           4. MOUSE PARALLAX
+        ============================================================ */
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetMouseX = 0;
+        let targetMouseY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            targetMouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+            targetMouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+        });
+
+        const parallaxElements = [];
+        document.querySelectorAll('[data-parallax]').forEach(el => {
+            parallaxElements.push({ el, depth: parseFloat(el.dataset.parallax) });
+        });
+
+        function lerpParallax() {
+            mouseX += (targetMouseX - mouseX) * 0.06;
+            mouseY += (targetMouseY - mouseY) * 0.06;
+            for (const item of parallaxElements) {
+                const dx = mouseX * item.depth * 120;
+                const dy = mouseY * item.depth * 120;
+                item.el.style.transform = `translate(${dx}px, ${dy}px)`;
+            }
+            requestAnimationFrame(lerpParallax);
+        }
+        lerpParallax();
+
+        /* ============================================================
+           5. SCROLL FADE-IN
+        ============================================================ */
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) entry.target.classList.add('visible');
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        /* ============================================================
+           6. WAVEFORM ANIMATION
+        ============================================================ */
+        const wfCanvas = document.getElementById('waveform-canvas');
+        const wfCtx = wfCanvas.getContext('2d');
+
+        const waveBarCount = 80;
+        let waveTime = 0;
+        const waveBars = Array.from({ length: waveBarCount }, (_, i) => ({
+            phase: (i / waveBarCount) * Math.PI * 2,
+            speed: 0.04 + Math.random() * 0.06,
+            amp: 0.5 + Math.random() * 0.5
+        }));
+
+        function resizeWaveform() {
+            const rect = wfCanvas.parentElement.getBoundingClientRect();
+            const maxW = Math.min(rect.width - 80, 1200);
+            wfCanvas.width = maxW * window.devicePixelRatio;
+            wfCanvas.height = 220 * window.devicePixelRatio;
+            wfCanvas.style.width = maxW + 'px';
+            wfCanvas.style.height = '220px';
+        }
+        window.addEventListener('resize', resizeWaveform);
+        resizeWaveform();
+
+        function animateWaveform() {
+            waveTime += 0.04;
+            const cw = wfCanvas.width;
+            const ch = wfCanvas.height;
+
+            wfCtx.clearRect(0, 0, cw, ch);
+
+            const barW = cw / waveBarCount;
+            const centerY = ch / 2;
+            const maxH = ch * 0.38;
+
+            for (let i = 0; i < waveBarCount; i++) {
+                const b = waveBars[i];
+                const t = waveTime * b.speed * 25 + b.phase;
+                const heightFrac = b.amp * (0.4 + 0.6 * Math.abs(Math.sin(t) + 0.4 * Math.sin(t * 2.3) + 0.2 * Math.sin(t * 3.7)));
+                const h = maxH * heightFrac;
+                const x = i * barW + barW * 0.15;
+                const bw = barW * 0.7;
+
+                const norm = i / waveBarCount;
+                const rr = Math.round(255 * (1 - norm) + 130 * norm);
+                const gg = Math.round(110 * (1 - norm));
+                const bb = Math.round(39 * (1 - norm) + 255 * norm);
+
+                const grad = wfCtx.createLinearGradient(x, centerY - h, x, centerY + h);
+                grad.addColorStop(0, `rgba(${rr},${gg},${bb},0.9)`);
+                grad.addColorStop(0.5, `rgba(${rr},${gg},${bb},1)`);
+                grad.addColorStop(1, `rgba(${rr},${gg},${bb},0.9)`);
+
+                wfCtx.save();
+                wfCtx.fillStyle = grad;
+                wfCtx.shadowColor = `rgba(${rr},${gg},${bb},0.6)`;
+                wfCtx.shadowBlur = 12;
+                wfCtx.beginPath();
+                wfCtx.roundRect(x, centerY - h, bw, h * 2, 3);
+                wfCtx.fill();
+                wfCtx.restore();
+            }
+
+            requestAnimationFrame(animateWaveform);
+        }
+        animateWaveform();
+
+        /* ============================================================
+           7. NODE GRAPH BACKGROUND (features section)
+        ============================================================ */
+        const nodeCanvas = document.getElementById('node-canvas');
+        const nodeCtx = nodeCanvas.getContext('2d');
+
+        const NODE_COUNT = 24;
+        const nodeList = [];
+        const edgeList = [];
+
+        for (let i = 0; i < NODE_COUNT; i++) {
+            nodeList.push({
+                x: 0.1 + Math.random() * 0.8,
+                y: 0.15 + Math.random() * 0.7,
+                vx: (Math.random() - 0.5) * 0.0006,
+                vy: (Math.random() - 0.5) * 0.0006,
+                r: 4 + Math.random() * 5,
+                pulse: Math.random() * Math.PI * 2,
+                color: Math.random() > 0.5 ? '#00d4ff' : '#FF6E27'
+            });
+        }
+
+        for (let i = 0; i < NODE_COUNT; i++) {
+            for (let j = i + 1; j < NODE_COUNT; j++) {
+                const dx = nodeList[i].x - nodeList[j].x;
+                const dy = nodeList[i].y - nodeList[j].y;
+                const d = Math.sqrt(dx * dx + dy * dy);
+                if (d < 0.28) {
+                    edgeList.push({ a: i, b: j, progress: 0, growing: true, speed: 0.008 + Math.random() * 0.012 });
+                }
+            }
+        }
+
+        function resizeNodeCanvas() {
+            const wrapper = document.querySelector('.features-wrapper');
+            nodeCanvas.width = wrapper.offsetWidth;
+            nodeCanvas.height = wrapper.offsetHeight;
+        }
+        window.addEventListener('resize', resizeNodeCanvas);
+        setTimeout(resizeNodeCanvas, 100);
+
+        function animateNodes() {
+            const cw = nodeCanvas.width;
+            const ch = nodeCanvas.height;
+            nodeCtx.clearRect(0, 0, cw, ch);
+
+            for (const n of nodeList) {
+                n.x += n.vx; n.y += n.vy;
+                if (n.x < 0.05 || n.x > 0.95) n.vx *= -1;
+                if (n.y < 0.05 || n.y > 0.95) n.vy *= -1;
+                n.pulse += 0.04;
+            }
+
+            for (const e of edgeList) {
+                if (e.growing) {
+                    e.progress = Math.min(e.progress + e.speed, 1);
+                    if (e.progress >= 1) e.growing = false;
+                } else {
+                    e.progress = Math.max(e.progress - e.speed * 0.3, 0.3);
+                    if (e.progress <= 0.3) e.growing = true;
+                }
+                const na = nodeList[e.a], nb = nodeList[e.b];
+                const ax = na.x * cw, ay = na.y * ch;
+                const bx = nb.x * cw, by = nb.y * ch;
+                const ex = ax + (bx - ax) * e.progress;
+                const ey = ay + (by - ay) * e.progress;
+                const lineCol = na.color === '#00d4ff' ? 'rgba(0,212,255,' : 'rgba(255,110,39,';
+                nodeCtx.save();
+                nodeCtx.globalAlpha = 0.4 * e.progress;
+                nodeCtx.beginPath();
+                nodeCtx.moveTo(ax, ay);
+                nodeCtx.lineTo(ex, ey);
+                nodeCtx.strokeStyle = lineCol + '0.8)';
+                nodeCtx.lineWidth = 1.2;
+                nodeCtx.shadowColor = lineCol + '0.5)';
+                nodeCtx.shadowBlur = 8;
+                nodeCtx.stroke();
+                nodeCtx.restore();
+            }
+
+            for (const n of nodeList) {
+                const nx = n.x * cw, ny = n.y * ch;
+                const pulseR = n.r + Math.sin(n.pulse) * 2;
+                nodeCtx.save();
+                nodeCtx.globalAlpha = 0.9;
+                const ng = nodeCtx.createRadialGradient(nx, ny, 0, nx, ny, pulseR * 3);
+                const isBlue = n.color === '#00d4ff';
+                ng.addColorStop(0, n.color);
+                ng.addColorStop(0.5, isBlue ? 'rgba(0,212,255,0.4)' : 'rgba(255,110,39,0.4)');
+                ng.addColorStop(1, 'transparent');
+                nodeCtx.beginPath();
+                nodeCtx.arc(nx, ny, pulseR, 0, Math.PI * 2);
+                nodeCtx.fillStyle = ng;
+                nodeCtx.shadowColor = n.color;
+                nodeCtx.shadowBlur = 18;
+                nodeCtx.fill();
+                nodeCtx.restore();
+
+                nodeCtx.save();
+                nodeCtx.beginPath();
+                nodeCtx.arc(nx, ny, pulseR * 0.4, 0, Math.PI * 2);
+                nodeCtx.fillStyle = '#fff';
+                nodeCtx.globalAlpha = 0.9;
+                nodeCtx.fill();
+                nodeCtx.restore();
+            }
+
+            requestAnimationFrame(animateNodes);
+        }
+        animateNodes();
+    </script>
+</body>
+</html>
